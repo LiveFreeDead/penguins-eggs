@@ -524,16 +524,13 @@
       "args": {},
       "description": "produce a live image from your system whithout your data",
       "examples": [
-        "sudo eggs produce                    # fast compression",
-        "sudo eggs produce --max              # max compression",
-        "sudo eggs produce --pendrive         # compression optomized pendrive",
-        "sudo eggs produce --clone            # clone",
-        "sudo eggs produce --cryptedclone     # crypted clone",
+        "sudo eggs produce",
+        "sudo eggs produce --max",
+        "sudo eggs produce --pendrive",
+        "sudo eggs produce --clone",
+        "sudo eggs produce --cryptedclone",
         "sudo eggs produce --basename=colibri",
-        "sudo eggs produce --theme lastos",
-        "sudo eggs produce --excludes static  # you can customize it",
-        "sudo eggs produce --excludes homes   # exclude /home/*",
-        "sudo eggs produce --excludes home    # exclude ~/*"
+        "sudo eggs produce --basename=colibri --theme theme --addons adapt"
       ],
       "flags": {
         "addons": {
@@ -565,7 +562,7 @@
           "type": "boolean"
         },
         "excludes": {
-          "description": "use: static, homes, home",
+          "description": "use: custom, home, mine, usr, var",
           "name": "excludes",
           "hasDynamicHelp": false,
           "multiple": true,
@@ -633,13 +630,6 @@
           "name": "script",
           "allowNo": false,
           "type": "boolean"
-        },
-        "sidecar": {
-          "description": "add a sidecar folder on your ISO with arbitrary contents",
-          "name": "sidecar",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
         },
         "standard": {
           "char": "f",
@@ -1468,5 +1458,5 @@
       ]
     }
   },
-  "version": "10.0.12"
+  "version": "10.0.10"
 }

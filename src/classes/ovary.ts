@@ -72,8 +72,6 @@ export default class Ovary {
 
   toNull = ''
 
-  sidecar = ''
-
   verbose = false
 
   /**
@@ -413,10 +411,7 @@ export default class Ovary {
       let text = ''
       text += '#!/bin/sh\n'
       text += 'DESKTOP=$(xdg-user-dir DESKTOP)\n'
-      text += 'while [ ! -d "$DESKTOP" ]; do\n'
-      text += '  DESKTOP=$(xdg-user-dir DESKTOP)\n'
-      text += '  sleep 1\n'
-      text += 'done\n'
+      text += 'test -d "$DESKTOP" && mkdir -p "$DESKTOP"\n'
       text += `cp /usr/share/applications/${installerUrl} "$DESKTOP"\n`
       if (Pacman.packageIsInstalled('lxde-core')) {
         if (!noicons) {
@@ -988,15 +983,6 @@ export default class Ovary {
       this.tryCatch(cmd)
     }
 
-    // sidecar
-    if (this.sidecar !== '') {
-      this.sidecar = path.resolve(this.sidecar)
-      cmd = `mkdir -p ${this.settings.iso_work}sidecar`
-      this.tryCatch(cmd)
-      cmd = `cp ${this.sidecar}/* ${this.settings.iso_work}sidecar -R`
-      this.tryCatch(cmd)
-    }
-
     // Ovarium
     if (!fs.existsSync(this.settings.work_dir.ovarium)) {
       cmd = `mkdir -p ${this.settings.work_dir.ovarium}`
@@ -1322,12 +1308,12 @@ export default class Ovary {
     }
 
     Utils.writeX(`${this.settings.work_dir.ovarium}mkisofs`, cmd)
-
+    
     // Create link to iso ALLWAYES
     const src = this.settings.config.snapshot_mnt + this.settings.isoFilename
     const dest = this.settings.config.snapshot_dir + this.settings.isoFilename
     await exec(`ln -s ${src} ${dest}`)
-
+    
     if (!scriptOnly) {
       const test = (await exec(cmd, Utils.setEcho(true))).code
       if (test !== 0) {
@@ -1521,8 +1507,7 @@ export default class Ovary {
    * @param unsecure
    * @param verbose
    */
-  async produce(clone = false, cryptedclone = false, scriptOnly = false, yolkRenew = false, release = false, myAddons: IAddons, myLinks: string[], excludes: IExcludes, nointeractive = false, noicons = false, unsecure = false, sidecar='', verbose = false) {
-    this.sidecar = sidecar
+  async produce(clone = false, cryptedclone = false, scriptOnly = false, yolkRenew = false, release = false, myAddons: IAddons, myLinks: string[], excludes: IExcludes, nointeractive = false, noicons = false, unsecure = false, verbose = false) {
     this.verbose = verbose
     this.echo = Utils.setEcho(verbose)
     if (this.verbose) {
@@ -1615,50 +1600,44 @@ export default class Ovary {
       }
 
       /**
-       * exclude.list
+       * create exclude.list in not exists or static
        */
-      if (!excludes.static) {
-        /**
-         * create exclude.list if not exists
-         */
-        if (!fs.existsSync('/etc/penguins-eggs/exclude.list')) {
-          const excludeListTemplateDir = '/etc/penguins-eggs.d/exclude.list.d/'
-          const excludeListTemplate = excludeListTemplateDir + 'master.list'
-          if (!fs.existsSync(excludeListTemplate)) {
-            Utils.warning('Cannot find: ' + excludeListTemplate)
-            process.exit(1)
-          }
-
-          let excludeUsr = ''
-          let excludeVar = ''
-          let excludeHomes = ''
-          let excludeHome = ''
-
-          if (excludes.usr) {
-            excludeUsr = fs.readFileSync(`${excludeListTemplateDir}usr.list`, 'utf8')
-          }
-
-          if (excludes.var) {
-            excludeVar = fs.readFileSync(`${excludeListTemplateDir}var.list`, 'utf8')
-          }
-
-          if (excludes.homes) {
-            excludeHomes = fs.readFileSync(`${excludeListTemplateDir}homes.list`, 'utf8')
-          }
-
-          if (excludes.home) {
-            excludeHome = `home/${await Utils.getPrimaryUser()}/*`
-          }
-
-          const view = {
-            usr_list: excludeUsr,
-            var_list: excludeVar,
-            homes_list: excludeHomes,
-            home_list: excludeHome,
-          }
-          const template = fs.readFileSync(excludeListTemplate, 'utf8')
-          fs.writeFileSync(this.settings.config.snapshot_excludes, mustache.render(template, view))
+      if (!fs.existsSync('/etc/penguins-eggs/exclude.list') || excludes.static) {
+        const excludeListTemplateDir = '/etc/penguins-eggs.d/exclude.list.d/'
+        const excludeListTemplate = excludeListTemplateDir + 'master.list'
+        if (!fs.existsSync(excludeListTemplate)) {
+          Utils.warning('Cannot find: ' + excludeListTemplate)
+          process.exit(1)
         }
+
+        let excludeHome = ''
+        let excludeMine = ''
+        let excludeUsr = ''
+        let excludeVar = ''
+        if (excludes.mine) {
+          excludeMine = `home/${await Utils.getPrimaryUser()}/*`
+        }
+
+        if (excludes.home) {
+          excludeHome = fs.readFileSync(`${excludeListTemplateDir}home.list`, 'utf8')
+        }
+
+        if (excludes.usr) {
+          excludeUsr = fs.readFileSync(`${excludeListTemplateDir}usr.list`, 'utf8')
+        }
+
+        if (excludes.var) {
+          excludeVar = fs.readFileSync(`${excludeListTemplateDir}var.list`, 'utf8')
+        }
+
+        const view = {
+          home_list: excludeHome,
+          mine_list: excludeMine,
+          usr_list: excludeUsr,
+          var_list: excludeVar
+        }
+        const template = fs.readFileSync(excludeListTemplate, 'utf8')
+        fs.writeFileSync(this.settings.config.snapshot_excludes, mustache.render(template, view))
       }
 
       /**
@@ -1736,7 +1715,7 @@ export default class Ovary {
         await exec(`mv ${luksFile} ${this.nest}iso/live`, this.echo)
       }
 
-      const mkIsofsCmd = (await this.xorrisoCommand(clone, cryptedclone)).replaceAll(/\s\s+/g, ' ')
+      const mkIsofsCmd = this.xorrisoCommand(clone, cryptedclone).replaceAll(/\s\s+/g, ' ')
       this.makeDotDisk(this.volid, mksquashfsCmd, mkIsofsCmd)
 
       /**
@@ -1937,7 +1916,7 @@ export default class Ovary {
    * @param cryptedclone
    * @returns cmd 4 mkiso
    */
-  async xorrisoCommand(clone = false, cryptedclone = false): Promise<string> {
+  xorrisoCommand(clone = false, cryptedclone = false): string {
     if (this.verbose) {
       console.log('Ovary: xorrisoCommand')
     }
@@ -1989,7 +1968,6 @@ export default class Ovary {
       uefi_isohybridGptBasdat = '-isohybrid-gpt-basdat'
       uefi_noEmulBoot = '-no-emul-boot'
     }
-
 
     // xorriso
     command = `xorriso -as mkisofs \

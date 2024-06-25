@@ -32,22 +32,6 @@ Since version `9.6.x` Penguins' eggs is released - as Debian package - for: `amd
 # Changelog
 Versions are listed on reverse order, the first is the last one. Old versions are moved to [versions](https://sourceforge.net/projects/penguins-eggs/files/DEBS/versions/). 
 
-## penguins-eggs-10.0.12
-`produce`: added the `--sidecar` flag, allows the inclusion of an arbitrary directory within the generated ISO. Uses can be disparate, I leave it to you.
-
-## penguins-eggs-10.0.11-2
-The `/usr/bin/penguins-links-add.sh` script called by `/etc/xdg/autostart/penguins-links-add.desktop` now waits for the Desktop folder to be present before copying the links to the desktop, with the result that all links are shown correctly.
-
-## penguins-eggs-10.0.11-1
-* `produce --excludes`, now accept `static`, `homes` and `home`,
-
-Use:
-
-* `sudo eggs --excludes static` you can use a static exclude.list;
-* `sudo eggs --excludes homes` you want to clean all users' homes;
-* `sudo eggs --excludes home` don't save my home dir.
-
-
 ## penguins-eggs-10.0.10-1
 * dad: added a new flag `--file` to have own configuration defaults.
 

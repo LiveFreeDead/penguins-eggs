@@ -16,7 +16,6 @@ import Ovary from '../classes/ovary.js'
 import Utils from '../classes/utils.js'
 import { IAddons, IExcludes } from '../interfaces/index.js'
 import Config from './config.js'
-import { Static } from 'ink'
 
 // _dirname
 const __dirname = path.dirname(new URL(import.meta.url).pathname)
@@ -25,16 +24,13 @@ export default class Produce extends Command {
   static description = 'produce a live image from your system whithout your data'
 
   static examples = [
-    'sudo eggs produce                    # fast compression',    
-    'sudo eggs produce --max              # max compression', 
-    'sudo eggs produce --pendrive         # compression optomized pendrive',
-    'sudo eggs produce --clone            # clone', 
-    'sudo eggs produce --cryptedclone     # crypted clone',
+    'sudo eggs produce',
+    'sudo eggs produce --max',
+    'sudo eggs produce --pendrive',
+    'sudo eggs produce --clone',
+    'sudo eggs produce --cryptedclone',
     'sudo eggs produce --basename=colibri',
-    'sudo eggs produce --theme lastos',
-    'sudo eggs produce --excludes static  # you can customize it',
-    'sudo eggs produce --excludes homes   # exclude /home/*',
-    'sudo eggs produce --excludes home    # exclude ~/*',
+    'sudo eggs produce --basename=colibri --theme theme --addons adapt',
   ]
 
   static flags = {
@@ -42,7 +38,7 @@ export default class Produce extends Command {
     basename: Flags.string({ description: 'basename' }),
     clone: Flags.boolean({ char: 'c', description: 'clone' }),
     cryptedclone: Flags.boolean({ char: 'C', description: 'crypted clone' }),
-    excludes: Flags.string({ description: 'use: static, homes, home', multiple: true }),
+    excludes: Flags.string({ description: 'use: custom, home, mine, usr, var', multiple: true }),
     help: Flags.help({ char: 'h' }),
     links: Flags.string({ description: 'desktop links', multiple: true }),
     max: Flags.boolean({ char: 'm', description: 'max compression: xz -Xbcj ...' }),
@@ -52,7 +48,6 @@ export default class Produce extends Command {
     prefix: Flags.string({ char: 'P', description: 'prefix' }),
     release: Flags.boolean({ description: 'release: remove penguins-eggs, calamares and dependencies after installation' }),
     script: Flags.boolean({ char: 's', description: 'script mode. Generate scripts to manage iso build' }),
-    sidecar: Flags.string({ description: 'add a sidecar folder on your ISO with arbitrary contents' }),
     standard: Flags.boolean({ char: 'f', description: 'standard compression: xz -b 1M' }),
     theme: Flags.string({ description: 'theme for livecd, calamares branding and partitions' }),
     unsecure: Flags.boolean({ char: 'u', description: '/root contents are included on live' }),
@@ -114,23 +109,31 @@ export default class Produce extends Command {
 
       // excludes
       const excludes = {} as IExcludes
-      excludes.usr = true
-      excludes.var = true
       excludes.static = false
-      excludes.homes = false
       excludes.home = false
+      excludes.mine = false
+      excludes.usr = false
+      excludes.var = false
 
       if (flags.excludes) {
         if (flags.excludes.includes('static')) {
           excludes.static = true
         }
 
-        if (flags.excludes.includes('homes')) {
-          excludes.homes = true
-        }
-
         if (flags.excludes.includes('home')) {
           excludes.home = true
+        }
+
+        if (flags.excludes.includes('mine')) {
+          excludes.mine = true
+        }
+
+        if (flags.excludes.includes('usr')) {
+          excludes.usr = true
+        }
+
+        if (flags.excludes.includes('var')) {
+          excludes.var = true
         }
       }
 
@@ -171,14 +174,6 @@ export default class Produce extends Command {
       const { nointeractive } = flags
 
       const { noicon } = flags
-
-      const { sidecar } = flags
-      if (sidecar !== undefined) {
-        if (!fs.existsSync(sidecar)) {
-          Utils.warning('sidecar: ' + chalk.white(sidecar) + ' not found!')
-          process.exit()
-        }
-      }
 
       // if clone or cryptedclone unsecure = true
       const unsecure = flags.unsecure || clone || cryptedclone
@@ -227,14 +222,13 @@ export default class Produce extends Command {
         if (flags.addons.includes('rsupport')) {
           myAddons.rsupport = true
         }
-
       }
 
       Utils.titles(this.id + ' ' + this.argv)
       const ovary = new Ovary()
       Utils.warning('Produce an egg...')
       if (await ovary.fertilization(prefix, basename, theme, compression, !nointeractive)) {
-        await ovary.produce(clone, cryptedclone, scriptOnly, yolkRenew, release, myAddons, myLinks, excludes, nointeractive, noicon, unsecure, sidecar, verbose)
+        await ovary.produce(clone, cryptedclone, scriptOnly, yolkRenew, release, myAddons, myLinks, excludes, nointeractive, noicon, unsecure, verbose)
         ovary.finished(scriptOnly)
       }
     } else {
